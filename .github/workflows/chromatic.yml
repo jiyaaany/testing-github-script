@@ -16,5 +16,5 @@ jobs:
           pull_number: ${{ github.event.pull_request.number }}
 
       - name: Echo
-        run: echo "${{ steps.reviews.outputs.approved }}"
+        run: echo "${{ steps.reviews.outputs.pending }}"
 
