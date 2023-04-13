@@ -11,11 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - id: reviews
-        uses: jrylan/github-action-reviews-counter@main
+        uses: github-actions-tools/gh-reviews-count@v0.0.1
         with:
-          repo-token: '${{ secrets.GITHUB_TOKEN }}'
+          pull_number: ${{ github.event.pull_request.number }}
 
-      - name: echo
-        if: steps.reviews.outputs.pending == 0
-        run: echo "${{ steps.reviews.outputs.pending }}"
+      - name: Echo
+        run: echo "${{ steps.reviews.outputs.approved }}"
 
