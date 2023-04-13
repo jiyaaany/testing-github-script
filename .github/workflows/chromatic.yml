@@ -1,0 +1,99 @@
+name: Chromatic
+run-name: ${{ github.actor }}의 디자인시스템 작업물이 도착했어요!
+
+on:
+  pull_request:
+  pull_request_review:
+    types: [submitted]
+
+jobs:
+  check-pull-request:
+    runs-on: ubuntu-latest
+
+    outputs:
+      nickname: ${{ steps.nickname.outputs.nickname }}
+
+    steps:
+      - name: Get pull request information
+        id: pr-info
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            const { data: pullRequest } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+            });
+            return { reviews, pullRequest };
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check if pull request is approved
+        run: |
+          approvals=$(echo "${{ steps.pr-info.outputs.reviews }}" | jq '[.[] | select(.state == "APPROVED") | .user.login] | unique | length')
+          requested_reviewers=$(echo "${{ steps.pr-info.outputs.pullRequest }}" | jq '[.requested_reviewers[].login] | unique | length')
+          if [[ $approvals -eq $requested_reviewers ]]; then
+            echo "All reviewers have approved the pull request!"
+          else
+            echo "Not all reviewers have approved the pull request."
+          fi
+
+  chromatic-deployment:
+    runs-on: ubuntu-latest
+    needs: check-pull-request
+
+    steps:
+      - uses: actions/checkout@v1
+
+      #      - name: Cache node modules
+      #        id: cache
+      #        uses: actions/cache@v3
+      #        with:
+      #          path: '**/node_modules'
+      #          key: ${{ runner.os }}-node-${{ hashFiles('**/yarn.lock') }}
+      #          restore-keys: |
+      #            ${{ runner.os }}-node-
+      #
+      #      - name: List the state of node modules
+      #        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      #        continue-on-error: true
+      #        run: yarn list
+      #
+      #      - name: Install dependencies
+      #        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      #        run: yarn
+      #
+      #      - name: Publish to Chromatic
+      #        id: publish
+      #        uses: chromaui/action@v1
+      #        with:
+      #          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+      #
+      #      - name: Create Chromatic comment
+      #        uses: thollander/actions-comment-pull-request@v2
+      #        with:
+      #          message: |
+      #            Chromatic URL: ${{ steps.publish.outputs.url }}
+      #          reactions: hooray, rocket
+      #        env:
+      #          GITHUB_TOKEN: ${{ secrets.PAT }}
+
+      - name: Share to slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: custom
+          fields: workflow, job, commit, repo, ref, author, took
+          custom_payload: |
+            {
+              attachments: [{
+                color: 'good',
+                text: `😸말순이가 물어온 ${{ needs.check-pull-request.outputs.nickname }}의 작업물 보러가기 ⤵️️\n test중입니다.`,
+              }]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
