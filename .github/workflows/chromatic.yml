@@ -2,38 +2,20 @@ name: Chromatic
 run-name: ${{ github.actor }}의 디자인시스템 작업물이 도착했어요!
 
 on:
-  pull_request:
   pull_request_review:
     types: [submitted]
 
 jobs:
-  check_approved:
+  your-action:
+    if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Install dependencies
-        run: npm install @octokit/rest
-
-      - name: Check reviews
-        id: check_reviews
-        uses: octokit/request-action@v2.x
+      - id: reviews
+        uses: jrylan/github-action-reviews-counter@main
         with:
-          route: GET /repos/:owner/:repo/pulls/:pull_number/reviews
-          owner: ${{ github.repository_owner }}
-          repo: ${{ github.repository }}
-          pull_number: ${{ github.event.pull_request.number }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: '${{ secrets.GITHUB_TOKEN }}'
 
-      - name: Check for approvals
-        run: |
-          approved=$(echo "${{ steps.check_reviews.outputs.data }}" | jq '[.[] | select(.state == "APPROVED") | .user.login] | unique | length')
-          requested=$(echo "${{ steps.check_reviews.outputs.data }}" | jq '[.[] | select(.state == "PENDING") | .user.login] | unique | length')
-          if [[ $approved -eq $requested ]]; then
-            echo "All reviewers have approved the pull request!"
-          else
-            echo "Not all reviewers have approved the pull request."
-            exit 1
-          fi
+      - name: echo
+        if: steps.reviews.outputs.pending == 0
+        run: echo "${{ steps.reviews.outputs.pending }}"
+
