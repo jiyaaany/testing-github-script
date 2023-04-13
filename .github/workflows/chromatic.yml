@@ -32,10 +32,12 @@ jobs:
 
       - name: Check if pull request is approved
         run: |
-          approvals=$(echo "${{ steps.pr-info.outputs.reviews }}" | jq '[.[] | select(.state == "APPROVED") | .user.login] | unique | length')
-          requested_reviewers=$(echo "${{ steps.pr-info.outputs.pullRequest }}" | jq '[.requested_reviewers[].login] | unique | length')
+          reviews=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/pulls/$PULL_REQUEST_NUMBER/reviews") 
+          approvals=$(echo "$reviews" | jq '[.[] | select(.state == "APPROVED") | .user.login] | unique | length')
+          requested_reviewers=$(echo "$reviews" | jq '[.[] | select(.user.login == .requested_reviewer.login) | .user.login] | unique | length') 
           if [[ $approvals -eq $requested_reviewers ]]; then
-            echo "All reviewers have approved the pull request!"
+          echo "All reviewers have approved the pull request!"
           else
-            echo "Not all reviewers have approved the pull request."
+          echo "Not all reviewers have approved the pull request."
           fi
