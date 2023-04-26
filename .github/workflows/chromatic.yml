@@ -1,20 +1,19 @@
-name: Chromatic
-run-name: ${{ github.actor }}의 디자인시스템 작업물이 도착했어요!
+name: Share to Slack
 
 on:
   pull_request_review:
     types: [submitted]
 
 jobs:
-  your-action:
+  check-pull-request:
     if: github.event.review.state == 'approved'
     runs-on: ubuntu-latest
+
     steps:
       - id: reviews
         uses: github-actions-tools/gh-reviews-count@v0.0.1
         with:
           pull_number: ${{ github.event.pull_request.number }}
 
-      - name: Echo
-        run: echo "${{ steps.reviews.outputs.approved }}"
-
+      - if: steps.reviews.outputs.approved >= 2
+        run: echo "${{steps.reviews.outputs.approved}}"
